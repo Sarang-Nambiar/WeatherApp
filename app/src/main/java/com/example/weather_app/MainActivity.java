@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -25,6 +26,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -72,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //initializing all variables and views
-        try{
+        try {
             mPreferences = getSharedPreferences(sharedPrefFile, MODE_PRIVATE);
             arrayList = new ArrayList<>();
             cityNameText = findViewById(R.id.cityText);
@@ -106,40 +109,17 @@ public class MainActivity extends AppCompatActivity {
                     != PackageManager.PERMISSION_GRANTED &&
                     ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
                             != PackageManager.PERMISSION_GRANTED) {
-                try {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[]{
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION
                     }, 101);
-                } catch (Exception e) {
-                    startActivity(new Intent(MainActivity.this, noPermissionsPrompt.class));
-                }
 
             }else{
-                ConnectivityManager connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-                // checks if the device is connected to a network
-                boolean connected = (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
-                        connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED);
-                if (connected){
-                    // retrieves location from GPS
-                    ProgressDialog progressDialog = new ProgressDialog(this);
-                    progressDialog.setTitle("Loading...");
-                    progressDialog.setMessage("Fetching your location");
-                    progressDialog.setCancelable(false);
-                    progressDialog.show();
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
-                        @Override
-                        public void onLocationChanged(@NonNull Location location) {
-                            getWeather(location.getLatitude(), location.getLongitude());
-                            progressDialog.dismiss();
-                        }
-                    });
-                    for (String cityname : LIST_CITIES) {
-                        getWeatherCity(cityname);
-                    }
-                }
+                setUpWeather();
             }
-        }catch (Exception ex){
+
+
+        } catch (Exception ex) {
             //TODO
         }
     }
@@ -211,6 +191,27 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
+    @SuppressLint("MissingPermission")
+    private void setUpWeather(){
+        ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setTitle("Loading...");
+        progressDialog.setMessage("Fetching your location");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        // retrieves location from GPS
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
+
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                getWeather(location.getLatitude(), location.getLongitude());
+                progressDialog.dismiss();
+            }
+        });
+        for (String cityname : LIST_CITIES) {
+            getWeatherCity(cityname);
+        }
+    }
 
     // Calling openWeathermap API for LIST_CITIES
     // Uses Volley for API response handling
@@ -265,7 +266,12 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 101) {
-            if ((grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_DENIED)) {
+            if ((grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
+                if (ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED) {
+                    setUpWeather();
+                }
+            }else{
                 startActivity(new Intent(MainActivity.this, noPermissionsPrompt.class));
             }
         }
