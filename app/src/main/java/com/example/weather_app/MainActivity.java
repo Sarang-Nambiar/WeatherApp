@@ -1,58 +1,43 @@
 package com.example.weather_app;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
-import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
 import com.squareup.picasso.Picasso;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     LocationManager locationManager;
-    Location location;
     RVAdapter rvAdapter;
     private final String sharedPrefFile = "com.example.android.mainsharedprefs";
     public static final String CITY_NAME = "CITY_NAME";
@@ -83,159 +68,74 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //initializing all variables and views
-        mPreferences = getSharedPreferences(sharedPrefFile, MODE_PRIVATE);
-        arrayList = new ArrayList<>();
-        cityNameText = findViewById(R.id.cityText);
-        weatherText = findViewById(R.id.weatherText);
-        feelsLikeText = findViewById(R.id.feelsLikeText);
-        tempText = findViewById(R.id.tempText);
-        tempMaxText = findViewById(R.id.tempHighText);
-        tempMinText = findViewById(R.id.tempLowText);
-        iconView = findViewById(R.id.weatherIcon);
-        lastUpdatedText = findViewById(R.id.lastUpdatedText);
-        layout = (ConstraintLayout) findViewById(R.id.constraintLayout);
-        recyclerView = findViewById(R.id.cityRV);
-        pressureText = findViewById(R.id.pressureText); //populate for storing values
-        humidityText = findViewById(R.id.humidityText);
-        linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        try{
+            mPreferences = getSharedPreferences(sharedPrefFile, MODE_PRIVATE);
+            arrayList = new ArrayList<>();
+            cityNameText = findViewById(R.id.cityText);
+            weatherText = findViewById(R.id.weatherText);
+            feelsLikeText = findViewById(R.id.feelsLikeText);
+            tempText = findViewById(R.id.tempText);
+            tempMaxText = findViewById(R.id.tempHighText);
+            tempMinText = findViewById(R.id.tempLowText);
+            iconView = findViewById(R.id.weatherIcon);
+            lastUpdatedText = findViewById(R.id.lastUpdatedText);
+            layout = (ConstraintLayout) findViewById(R.id.constraintLayout);
+            recyclerView = findViewById(R.id.cityRV);
+            pressureText = findViewById(R.id.pressureText);
+            humidityText = findViewById(R.id.humidityText);
+            linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        //setting texts in text view after log in(no network case)
-        cityNameText.setText(mPreferences.getString(CITY_NAME, "--"));
-        weatherText.setText(mPreferences.getString(WEATHER, "--"));
-        feelsLikeText.setText(mPreferences.getString(FEELS_LIKE, "--"));
-        tempText.setText(mPreferences.getString(TEMP, "0\u00B0"));
-        tempMinText.setText(mPreferences.getString(TEMP_MIN, "0\u00B0"));
-        tempMaxText.setText(mPreferences.getString(TEMP_MAX, "0\u00B0"));
-        lastUpdatedText.setText(mPreferences.getString(LAST_UPDATED, "Last updated: Never"));
-        pressureText.setText(mPreferences.getString(PRESSURE, "--"));
-        humidityText.setText(mPreferences.getString(HUMIDITY, "--"));
+            //setting texts in text view after log in(no network case)
+            cityNameText.setText(mPreferences.getString(CITY_NAME, "--"));
+            weatherText.setText(mPreferences.getString(WEATHER, "--"));
+            feelsLikeText.setText(mPreferences.getString(FEELS_LIKE, "--"));
+            tempText.setText(mPreferences.getString(TEMP, "0\u00B0"));
+            tempMinText.setText(mPreferences.getString(TEMP_MIN, "0\u00B0"));
+            tempMaxText.setText(mPreferences.getString(TEMP_MAX, "0\u00B0"));
+            lastUpdatedText.setText(mPreferences.getString(LAST_UPDATED, "Last updated: Never"));
+            pressureText.setText(mPreferences.getString(PRESSURE, "--"));
+            humidityText.setText(mPreferences.getString(HUMIDITY, "--"));
 
-        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                        != PackageManager.PERMISSION_GRANTED) {
-            try {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                }, 101);
-            } catch (Exception e) {
-                startActivity(new Intent(MainActivity.this, noPermissionsPrompt.class));
-            }
-
-        } else {
-            ProgressDialog progressDialog = new ProgressDialog(this);
-            progressDialog.setTitle("Loading...");
-            progressDialog.setMessage("Fetching your location");
-            progressDialog.setCancelable(false);
-            progressDialog.show();
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
-                @Override
-                public void onLocationChanged(@NonNull Location location) {
-                    getWeather(location.getLatitude(), location.getLongitude());
-                    progressDialog.dismiss();
+            // checking if location permission is granted
+            if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED) {
+                try {
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                    }, 101);
+                } catch (Exception e) {
+                    startActivity(new Intent(MainActivity.this, noPermissionsPrompt.class));
                 }
-            });
-        }
-        for (String cityname : LIST_CITIES) {
-            getWeatherCity(cityname);
-        }
 
-
-//        if (isGPSEnabled()) {
-//            location = getLastKnownLocation(); // getting latitude and longitude
-//            getWeather(location.getLatitude(), location.getLongitude()); // getting current location
-//            }
-//        } else {
-//
-//        }
-    }
-
-    //checking if GPS is enabled
-    private boolean isGPSEnabled() {
-        if (locationManager == null) {
-            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        }
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER); // checks if the GPS is enabled
-    }
-
-
-    // getting the last known location of the user
-    private Location getLastKnownLocation() {
-        locationManager = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
-        List<String> providers = locationManager.getProviders(true);
-        Location bestLocation = null;
-        for (String provider : providers) {
-            @SuppressLint("MissingPermission") Location l = locationManager.getLastKnownLocation(provider);
-            if (l == null) {
-                continue;
+            }else{
+                // retrieves location from GPS
+                ProgressDialog progressDialog = new ProgressDialog(this);
+                progressDialog.setTitle("Loading...");
+                progressDialog.setMessage("Fetching your location");
+                progressDialog.setCancelable(false);
+                progressDialog.show();
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
+                    @Override
+                    public void onLocationChanged(@NonNull Location location) {
+                        getWeather(location.getLatitude(), location.getLongitude());
+                        progressDialog.dismiss();
+                    }
+                });
+                for (String cityname : LIST_CITIES) {
+                    getWeatherCity(cityname);
+                }
             }
-            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
-                // Found best last known location: %s", l);
-                bestLocation = l;
-            }
+        }catch (Exception ex){
+            //TODO
         }
-        return bestLocation;
     }
-//    public void getLocation(String voice2txt) {
-//        locationManager = (LocationManager)  this.getSystemService(Context.LOCATION_SERVICE);
-//        criteria = new Criteria();
-//        String bestProvider = String.valueOf(locationManager.getBestProvider(criteria, true)).toString();
-//        Location location = locationManager.getLastKnownLocation(bestProvider);
-//        if (isGPSEnabled()) {
-//            Log.e("TAG", "GPS is on");
-//            latitude = location.getLatitude();
-//            longitude = location.getLongitude();
-//            Toast.makeText(PlacesDecoder.this, "latitude:" + latitude + " longitude:" + longitude, Toast.LENGTH_SHORT).show();
-//        }
-//        else
-//        {
-//            AlertDialog.Builder notifyLocationServices = new AlertDialog.Builder(MainActivity.this);
-//            notifyLocationServices.setTitle("Switch on Location Services");
-//            notifyLocationServices.setMessage("Location Services must be turned on to complete this action. Also please take note that if on a very weak network connection,  such as 'E' Mobile Data or 'Very weak Wifi-Connections' it may take even 15 mins to load. If on a very weak network connection as stated above, location returned to application may be null or nothing and cause the application to crash.");
-//            notifyLocationServices.setPositiveButton("Ok, Open Settings", new DialogInterface.OnClickListener() {
-//                @Override
-//                public void onClick(DialogInterface dialog, int which) {
-//                    Intent openLocationSettings = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-//                    MainActivity.this.startActivity(openLocationSettings);
-//                    finish();
-//                }
-//            });
-//            notifyLocationServices.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-//                @Override
-//                public void onClick(DialogInterface dialog, int which) {
-//                    finish();
-//                }
-//            });
-//            notifyLocationServices.show();
-//        }
-//    }
-
-//    private Location getLocation() {
-//        if (ActivityCompat.checkSelfPermission(
-//                MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-//                MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION
-//                    , Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
-//        }
-//        locationManager = (LocationManager) getApplicationContext().getSystemService(LOCATION_SERVICE);
-//        List<String> providers = locationManager.getProviders(true);
-//        Location bestLocation = null;
-//        for (String provider : providers) {
-//            Location l = locationManager.getLastKnownLocation(provider);
-//            if (l == null) {
-//                continue;
-//            }
-//            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
-//                // Found best last known location: %s", l);
-//                bestLocation = l;
-//            }
-//        }
-//        return bestLocation;
-//    }
 
     // Calling openweathermap API for getting weather details in the current location
+    // Uses Volley package for retrieving response to the API
     private void getWeather(double latitude, double longitude) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         RequestQueue requestQueue = Volley.newRequestQueue(this);
@@ -298,7 +198,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    // calling openWeathermap API for LIST_CITIES
+    // Calling openWeathermap API for LIST_CITIES
+    // Uses Volley for API response handling
     private void getWeatherCity(String cityname) {
         RequestQueue requestQueue = Volley.newRequestQueue(getApplicationContext());
         ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -337,18 +238,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 requestQueue.add(stringRequest);
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-
-                    }
-                });
             }
         });
 
     }
 
-    // directing user to no Permissions page
+    // directing user to no Permissions page if the location access permission is denied
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
