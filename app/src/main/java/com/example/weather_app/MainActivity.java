@@ -9,12 +9,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -113,21 +115,24 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             }else{
-                // retrieves location from GPS
-                ProgressDialog progressDialog = new ProgressDialog(this);
-                progressDialog.setTitle("Loading...");
-                progressDialog.setMessage("Fetching your location");
-                progressDialog.setCancelable(false);
-                progressDialog.show();
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
-                    @Override
-                    public void onLocationChanged(@NonNull Location location) {
-                        getWeather(location.getLatitude(), location.getLongitude());
-                        progressDialog.dismiss();
+                WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+                if (wifi.isWifiEnabled()){
+                    // retrieves location from GPS
+                    ProgressDialog progressDialog = new ProgressDialog(this);
+                    progressDialog.setTitle("Loading...");
+                    progressDialog.setMessage("Fetching your location");
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10, 1, new LocationListener() {
+                        @Override
+                        public void onLocationChanged(@NonNull Location location) {
+                            getWeather(location.getLatitude(), location.getLongitude());
+                            progressDialog.dismiss();
+                        }
+                    });
+                    for (String cityname : LIST_CITIES) {
+                        getWeatherCity(cityname);
                     }
-                });
-                for (String cityname : LIST_CITIES) {
-                    getWeatherCity(cityname);
                 }
             }
         }catch (Exception ex){
