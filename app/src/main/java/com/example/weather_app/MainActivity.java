@@ -18,6 +18,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -147,11 +148,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         try {
+                            //getting JSONObjects from the API response
                             JSONObject jsonResponse = new JSONObject(response);
                             JSONArray jsonArray = jsonResponse.getJSONArray("weather");
                             JSONObject jsonObjectWeather = jsonArray.getJSONObject(0);
                             JSONObject jsonObjectMain = jsonResponse.getJSONObject("main");
 
+                            //retrieving the required properties from the JSONObjects
                             String description = jsonObjectWeather.getString("description");
                             String iconName = jsonObjectWeather.getString("icon");
                             String cityName = jsonResponse.getString("name");
@@ -174,6 +177,8 @@ public class MainActivity extends AppCompatActivity {
 
                             //downloading weather icons from openweathermap
                             Picasso.get().load(iconUrl + iconName + "@2x.png").into(iconView);
+
+                            //checking the time of day to set the appropriate layout background
                             if (iconName.contains("d")) {
                                 layout.setBackground(ContextCompat.getDrawable(getApplicationContext(), R.drawable.daytimebg));
                             } else {
@@ -189,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(MainActivity.this, error.toString(), Toast.LENGTH_SHORT).show();
+                        Log.d("ERROR", error.toString());
                     }
                 });
                 requestQueue.add(stringRequest);
@@ -212,15 +217,18 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         try {
+                            //getting JSONObjects from the API response
                             JSONObject jsonResponse = new JSONObject(response);
                             JSONArray jsonArray = jsonResponse.getJSONArray("weather");
                             JSONObject jsonObjectWeather = jsonArray.getJSONObject(0);
                             JSONObject jsonObjectMain = jsonResponse.getJSONObject("main");
 
+                            //retrieving the required properties from the JSONObjects
                             String iconName = jsonObjectWeather.getString("icon");
                             String cityName = jsonResponse.getString("name");
                             double temp = jsonObjectMain.getDouble("temp") - 273.15; // converting kelvins to celsius
 
+                            // setting up the cities recycler view
                             arrayList.add(new CityModel(Math.round(temp), cityName, iconName));
                             rvAdapter = new RVAdapter(getApplicationContext(), arrayList, iconUrl);
                             recyclerView.setLayoutManager(linearLayoutManager);
@@ -234,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(MainActivity.this, error.toString(), Toast.LENGTH_SHORT).show();
+                        Log.d("ERROR", error.toString());
                     }
                 });
                 requestQueue.add(stringRequest);
@@ -254,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //saving the API call values for offline use.
+    //saving the API call values for offline use or on startup.
     @Override
     protected void onPause() {
         super.onPause();
