@@ -16,6 +16,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,7 +25,6 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -115,8 +116,11 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             }else{
-                WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-                if (wifi.isWifiEnabled()){
+                ConnectivityManager connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+                // checks if the device is connected to a network
+                boolean connected = (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
+                        connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED);
+                if (connected){
                     // retrieves location from GPS
                     ProgressDialog progressDialog = new ProgressDialog(this);
                     progressDialog.setTitle("Loading...");
