@@ -115,7 +115,14 @@ public class MainActivity extends AppCompatActivity {
                     }, 101);
 
             }else{
-                setUpWeather();
+                // checking if the device is connected to a network
+                ConnectivityManager connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+                boolean connected = (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
+                        connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED);
+                if(connected){
+                    setUpWeather();
+                }
+
             }
 
 
